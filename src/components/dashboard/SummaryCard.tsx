@@ -6,6 +6,8 @@ interface SummaryCardProps {
   value: string;
   subtitle?: string;
   icon: ReactNode;
+  badge?: string;
+  badgeColor?: 'primary' | 'success' | 'warning' | 'destructive';
   trend?: {
     value: string;
     isPositive: boolean;
@@ -13,28 +15,60 @@ interface SummaryCardProps {
   className?: string;
 }
 
-export function SummaryCard({ title, value, subtitle, icon, trend, className }: SummaryCardProps) {
+const badgeColors = {
+  primary: 'bg-primary/10 text-primary',
+  success: 'bg-[hsl(var(--status-connected))]/10 text-[hsl(var(--status-connected))]',
+  warning: 'bg-[hsl(var(--status-warning))]/10 text-[hsl(var(--status-warning))]',
+  destructive: 'bg-destructive/10 text-destructive',
+};
+
+export function SummaryCard({ 
+  title, 
+  value, 
+  subtitle, 
+  icon, 
+  badge, 
+  badgeColor = 'primary',
+  trend, 
+  className 
+}: SummaryCardProps) {
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-lg border border-border/50 bg-card p-5',
-        'card-elevated transition-all duration-300 hover:border-primary/30',
+        'group relative overflow-hidden rounded-xl border border-border/50 bg-card p-6',
+        'transition-all duration-300 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5',
         className
       )}
     >
-      {/* Subtle glow effect */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 transition-opacity duration-300 hover:opacity-100" />
+      {/* Hover glow effect */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
       
-      <div className="relative flex items-start justify-between">
-        <div className="space-y-2">
+      <div className="relative">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary transition-transform duration-300 group-hover:scale-110">
+            {icon}
+          </div>
+          {badge && (
+            <span className={cn(
+              'px-2.5 py-1 rounded-full text-xs font-semibold',
+              badgeColors[badgeColor]
+            )}>
+              {badge}
+            </span>
+          )}
+        </div>
+
+        {/* Value */}
+        <div className="space-y-1">
           <p className="text-sm font-medium text-muted-foreground">{title}</p>
           <div className="flex items-baseline gap-2">
             <p className="text-3xl font-bold tracking-tight text-foreground">{value}</p>
             {trend && (
               <span
                 className={cn(
-                  'text-xs font-medium',
-                  trend.isPositive ? 'text-status-connected' : 'text-status-down'
+                  'text-xs font-semibold flex items-center gap-0.5',
+                  trend.isPositive ? 'text-[hsl(var(--status-connected))]' : 'text-destructive'
                 )}
               >
                 {trend.isPositive ? '↑' : '↓'} {trend.value}
@@ -42,11 +76,8 @@ export function SummaryCard({ title, value, subtitle, icon, trend, className }: 
             )}
           </div>
           {subtitle && (
-            <p className="text-xs text-muted-foreground">{subtitle}</p>
+            <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
           )}
-        </div>
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          {icon}
         </div>
       </div>
     </div>

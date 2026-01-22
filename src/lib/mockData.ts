@@ -3,17 +3,21 @@
 export interface VectorDBConnection {
   id: string;
   name: string;
-  engine: 'chroma' | 'weaviate' | 'milvus' | 'pinecone';
+  engine: 'chroma' | 'weaviate' | 'milvus' | 'pinecone' | 'qdrant';
   endpoint: string;
   location: 'local' | 'docker' | 'cloud';
   status: 'connected' | 'warning' | 'down';
   version: string;
   latency: number; // ms
+  collections: number;
+  totalVectors: number;
+  storageUsed: string;
 }
 
 export interface Collection {
   id: string;
   name: string;
+  connectionId: string;
   vectorCount: number;
   dimension: number;
   metadata: Record<string, string>;
@@ -47,51 +51,77 @@ export interface Summary {
 export const mockConnections: VectorDBConnection[] = [
   {
     id: '1',
-    name: 'Local Chroma',
+    name: 'Local Dev ChromaDB',
     engine: 'chroma',
-    endpoint: 'http://localhost:8000',
+    endpoint: 'localhost:8000',
     location: 'docker',
     status: 'connected',
     version: '0.4.22',
     latency: 12,
+    collections: 4,
+    totalVectors: 125430,
+    storageUsed: '1.2 GB',
   },
   {
     id: '2',
-    name: 'Dev Weaviate',
+    name: 'Docker Weaviate',
     engine: 'weaviate',
-    endpoint: 'http://localhost:8080',
+    endpoint: 'localhost:8080',
     location: 'docker',
     status: 'connected',
     version: '1.24.1',
-    latency: 8,
+    latency: 18,
+    collections: 2,
+    totalVectors: 89234,
+    storageUsed: '890 MB',
   },
   {
     id: '3',
-    name: 'Test Milvus',
-    engine: 'milvus',
-    endpoint: 'http://localhost:19530',
-    location: 'docker',
-    status: 'warning',
-    version: '2.3.5',
-    latency: 45,
+    name: 'Production Pinecone',
+    engine: 'pinecone',
+    endpoint: 'us-east-1.pinecone.io',
+    location: 'cloud',
+    status: 'connected',
+    version: '2024.1',
+    latency: 145,
+    collections: 8,
+    totalVectors: 234567,
+    storageUsed: '3.4 GB',
   },
   {
     id: '4',
-    name: 'Cloud Pinecone',
-    engine: 'pinecone',
-    endpoint: 'https://xxx.pinecone.io',
-    location: 'cloud',
+    name: 'Local Milvus Test',
+    engine: 'milvus',
+    endpoint: 'localhost:19530',
+    location: 'docker',
     status: 'down',
-    version: '2.0',
+    version: '-',
     latency: 0,
+    collections: 0,
+    totalVectors: 0,
+    storageUsed: '-',
+  },
+  {
+    id: '5',
+    name: 'Qdrant Cloud Cluster',
+    engine: 'qdrant',
+    endpoint: 'xyz-cluster.qdrant.io',
+    location: 'cloud',
+    status: 'warning',
+    version: '1.7.4',
+    latency: 98,
+    collections: 3,
+    totalVectors: 45678,
+    storageUsed: '1.1 GB',
   },
 ];
 
 export const mockCollections: Collection[] = [
   {
     id: '1',
+    connectionId: '1',
     name: 'product_embeddings',
-    vectorCount: 125430,
+    vectorCount: 52430,
     dimension: 1536,
     metadata: { model: 'text-embedding-ada-002', source: 'products_db' },
     createdAt: '2024-01-15T10:30:00Z',
@@ -101,10 +131,11 @@ export const mockCollections: Collection[] = [
   },
   {
     id: '2',
-    name: 'document_chunks',
-    vectorCount: 89234,
-    dimension: 768,
-    metadata: { model: 'sentence-transformers', source: 'documents' },
+    connectionId: '1',
+    name: 'customer_reviews',
+    vectorCount: 41000,
+    dimension: 1536,
+    metadata: { model: 'text-embedding-ada-002', source: 'reviews' },
     createdAt: '2024-01-10T08:00:00Z',
     updatedAt: '2024-01-22T09:15:00Z',
     status: 'active',
@@ -112,10 +143,11 @@ export const mockCollections: Collection[] = [
   },
   {
     id: '3',
-    name: 'user_queries',
-    vectorCount: 45678,
-    dimension: 384,
-    metadata: { model: 'all-MiniLM-L6-v2', source: 'query_logs' },
+    connectionId: '1',
+    name: 'technical_docs',
+    vectorCount: 22000,
+    dimension: 768,
+    metadata: { model: 'sentence-transformers', source: 'docs' },
     createdAt: '2024-01-18T16:45:00Z',
     updatedAt: '2024-01-22T11:30:00Z',
     status: 'indexing',
@@ -123,14 +155,87 @@ export const mockCollections: Collection[] = [
   },
   {
     id: '4',
-    name: 'knowledge_base',
-    vectorCount: 234567,
+    connectionId: '1',
+    name: 'faq_database',
+    vectorCount: 10000,
     dimension: 1536,
-    metadata: { model: 'text-embedding-3-small', source: 'wiki_export' },
+    metadata: { model: 'text-embedding-3-small', source: 'faq' },
     createdAt: '2024-01-05T12:00:00Z',
     updatedAt: '2024-01-21T18:00:00Z',
     status: 'active',
-    sizeBytes: 720000000,
+    sizeBytes: 50000000,
+  },
+  {
+    id: '5',
+    connectionId: '2',
+    name: 'articles',
+    vectorCount: 52100,
+    dimension: 768,
+    metadata: { model: 'sentence-transformers', source: 'articles' },
+    createdAt: '2024-01-12T10:00:00Z',
+    updatedAt: '2024-01-21T12:00:00Z',
+    status: 'active',
+    sizeBytes: 320000000,
+  },
+  {
+    id: '6',
+    connectionId: '2',
+    name: 'knowledge_base',
+    vectorCount: 37134,
+    dimension: 768,
+    metadata: { model: 'sentence-transformers', source: 'wiki' },
+    createdAt: '2024-01-08T14:00:00Z',
+    updatedAt: '2024-01-20T16:00:00Z',
+    status: 'active',
+    sizeBytes: 270000000,
+  },
+  {
+    id: '7',
+    connectionId: '3',
+    name: 'embeddings_prod',
+    vectorCount: 180000,
+    dimension: 1536,
+    metadata: { model: 'text-embedding-3-large', source: 'production' },
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-22T10:00:00Z',
+    status: 'active',
+    sizeBytes: 2100000000,
+  },
+  {
+    id: '8',
+    connectionId: '3',
+    name: 'semantic_search',
+    vectorCount: 54567,
+    dimension: 1536,
+    metadata: { model: 'text-embedding-3-large', source: 'search' },
+    createdAt: '2024-01-03T08:00:00Z',
+    updatedAt: '2024-01-22T08:00:00Z',
+    status: 'active',
+    sizeBytes: 1300000000,
+  },
+  {
+    id: '9',
+    connectionId: '5',
+    name: 'image_vectors',
+    vectorCount: 32000,
+    dimension: 512,
+    metadata: { model: 'clip-vit-base', source: 'images' },
+    createdAt: '2024-01-10T10:00:00Z',
+    updatedAt: '2024-01-21T14:00:00Z',
+    status: 'active',
+    sizeBytes: 780000000,
+  },
+  {
+    id: '10',
+    connectionId: '5',
+    name: 'text_embeddings',
+    vectorCount: 13678,
+    dimension: 768,
+    metadata: { model: 'all-MiniLM-L6-v2', source: 'text' },
+    createdAt: '2024-01-14T12:00:00Z',
+    updatedAt: '2024-01-22T06:00:00Z',
+    status: 'indexing',
+    sizeBytes: 320000000,
   },
 ];
 
@@ -191,10 +296,10 @@ export const mockSummary: Summary = {
   totalDocuments: 156,
   totalChunks: 494909,
   totalVectors: 494909,
-  usedStorageBytes: 1366000000,
+  usedStorageBytes: 5786000000,
   lastIndexingTime: '2024-01-22T11:30:00Z',
-  connectedDatabases: 3,
-  totalCollections: 4,
+  connectedDatabases: 4,
+  totalCollections: 17,
 };
 
 // Utility functions
@@ -239,4 +344,8 @@ export function getRelativeTime(dateString: string): string {
   if (diffMins < 60) return `${diffMins}분 전`;
   if (diffHours < 24) return `${diffHours}시간 전`;
   return `${diffDays}일 전`;
+}
+
+export function getCollectionsByConnection(connectionId: string): Collection[] {
+  return mockCollections.filter(c => c.connectionId === connectionId);
 }
